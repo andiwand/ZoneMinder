@@ -103,7 +103,9 @@ sub sendCmd
     printMsg( $cmd, "Tx" );
 
     # Control device needs to be of format user=xxx&pwd=yyy
-    my $req = HTTP::Request->new( GET=>"http://".$self->{Monitor}->{ControlAddress}."/$cmd"."&".$self->{Monitor}->{ControlDevice});
+    my $url = "http://".$self->{Monitor}->{ControlAddress}."/$cmd"."&".$self->{Monitor}->{ControlDevice};
+    Debug( $url );
+    my $req = HTTP::Request->new( GET=>$url );
     print ("Sending $req\n");
     my $res = $self->{ua}->request($req);
 
@@ -127,12 +129,34 @@ sub reset
     $self->sendCmd( 'reboot.cgi?' );
 }
 
+#Stop
+sub moveStop
+{
+    my $self = shift;
+    Debug( "Move Stop" );
+    $self->sendCmd( 'decoder_control.cgi?command=1' );
+}
+
+#Auto stop
+sub autoStop
+{
+    my $self = shift;
+    my $timeout = $self->{Monitor}->{AutoStopTimeout};
+    if( $timeout > 0 )
+    {
+       Debug( "Auto Stop in $timeout us" );
+       usleep( $timeout );
+       $self->moveStop();
+    }
+}
+
 #Up Arrow
 sub moveConUp
 {
     my $self = shift;
     Debug( "Move Up" );
     $self->sendCmd( 'decoder_control.cgi?command=0' );
+    $self->autoStop();
 }
 
 #Down Arrow
@@ -141,6 +165,7 @@ sub moveConDown
     my $self = shift;
     Debug( "Move Down" );
     $self->sendCmd( 'decoder_control.cgi?command=2' );
+    $self->autoStop();
 }
 
 #Left Arrow
@@ -149,6 +174,7 @@ sub moveConLeft
     my $self = shift;
     Debug( "Move Left" );
     $self->sendCmd( 'decoder_control.cgi?command=4' );
+    $self->autoStop();
 }
 
 #Right Arrow
@@ -157,6 +183,7 @@ sub moveConRight
     my $self = shift;
     Debug( "Move Right" );
     $self->sendCmd( 'decoder_control.cgi?command=6' );
+    $self->autoStop();
 }
 
 #Diagonally Up Right Arrow
@@ -165,6 +192,7 @@ sub moveConUpRight
     my $self = shift;
     Debug( "Move Diagonally Up Right" );
     $self->sendCmd( 'decoder_control.cgi?command=91' );
+    $self->autoStop();
 }
 
 #Diagonally Down Right Arrow
@@ -173,6 +201,7 @@ sub moveConDownRight
     my $self = shift;
     Debug( "Move Diagonally Down Right" );
     $self->sendCmd( 'decoder_control.cgi?command=93' );
+    $self->autoStop();
 }
 
 #Diagonally Up Left Arrow
@@ -181,6 +210,7 @@ sub moveConUpLeft
     my $self = shift;
     Debug( "Move Diagonally Up Left" );
     $self->sendCmd( 'decoder_control.cgi?command=90' );
+    $self->autoStop();
 }
 
 #Diagonally Down Left Arrow
@@ -189,14 +219,7 @@ sub moveConDownLeft
     my $self = shift;
     Debug( "Move Diagonally Down Left" );
     $self->sendCmd( 'decoder_control.cgi?command=92' );
-}
-
-#Stop
-sub moveStop
-{
-    my $self = shift;
-    Debug( "Move Stop" );
-    $self->sendCmd( 'decoder_control.cgi?command=1' );
+    $self->autoStop();
 }
 
 #Move Camera to Home Position
@@ -207,27 +230,15 @@ sub presetHome
     $self->sendCmd( 'decoder_control.cgi?command=25' );
 }
 
-sub autoStop
-{
-    my $self = shift;
-    my $autostop = shift;
-    if( $autostop )
-    {
-       Debug( "Auto Stop" );
-       usleep( $autostop );
-       $self->sendCmd( 'decoder_control.cgi?command=1' );
-    }
-}
-
 #Set preset
 sub presetSet
 {
     my $self = shift;
     my $params = shift;
     my $preset = $self->getParam( $params, 'preset' );
-    my $presetCmd = 30 + ($preset*2);
-    Debug( "Set Preset $preset with cmd $presetCmd" );
-    $self->sendCmd( 'decoder_control.cgi?command=$presetCmd' );
+    my $cmd = 30 + ($preset*2-2);
+    Debug( "Set Preset $preset with cmd $cmd" );
+    $self->sendCmd( 'decoder_control.cgi?command='.$cmd );
 }
 
 #Goto preset
@@ -236,9 +247,9 @@ sub presetGoto
     my $self = shift;
     my $params = shift;
     my $preset = $self->getParam( $params, 'preset' );
-    my $presetCmd = 31 + ($preset*2);
-    Debug( "Goto Preset $preset with cmd $presetCmd" );
-    $self->sendCmd( 'decoder_control.cgi?command=$presetCmd' );
+    my $cmd = 31 + ($preset*2-2);
+    Debug( "Goto Preset $preset with cmd $cmd" );
+    $self->sendCmd( 'decoder_control.cgi?command='.$cmd );
 }
 
 #Turn IR on
